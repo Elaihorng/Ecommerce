@@ -3,7 +3,7 @@
 	<head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>Aesthetic &mdash; Free Website Template, Free HTML5 Template by gettemplates.co</title>
+	<title>ELICENSE CAMBODIA.GOV.KH</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="Free HTML5 Website Template by gettemplates.co" />
 	<meta name="keywords" content="free website templates, free html5, free template, free bootstrap, free website template, html5, css3, mobile first, responsive" />
@@ -27,6 +27,7 @@
 
 	</head>
 	<body>
+		
 	<div class="gtco-loader"></div>
 	
 	<div id="page">
@@ -34,7 +35,11 @@
 		@include('frontend/layout/header')
 
 		@yield('header')
-
+		@if (session('success'))
+			<div class="alert alert-success" style="margin-bottom: 15px;">
+				{{ session('success') }}
+			</div>
+		@endif
 		<div class="cintainer">
 
 			@yield('content')
@@ -49,9 +54,13 @@
 
 	</div>
 
+	<!-- Go To Top Button -->
 	<div class="gototop js-top">
-		<a href="#" class="js-gotop"><i class="icon-arrow-up"></i></a>
+	<a href="#" class="js-gotop">
+		<i class="fas fa-arrow-up"></i>
+	</a>
 	</div>
+
 	@include('frontend/layout/jssshop')
 	</body>
 </html>

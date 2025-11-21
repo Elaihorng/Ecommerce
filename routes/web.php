@@ -7,7 +7,13 @@ use App\Http\Controllers\frontend\UserController;
 use App\Http\Controllers\frontend\NewsController;
 use App\Http\Controllers\frontend\AboutController;
 use App\Http\Controllers\frontend\CheckoutController;
+use App\Http\Controllers\backend\AuthController;
 use Illuminate\Support\Facades\Artisan;
+use App\Http\Controllers\frontend\DriverRegistrationController;
+use App\Http\Controllers\frontend\LicenseRenewalController;
+use App\Http\Controllers\frontend\BookingController;
+use App\Http\Controllers\frontend\RegisterController;
+use App\Http\Controllers\backend\BakongController;
 
 // Route::get('/', function () {
 //     return view('frontend.layout.master'); // ✅ load the child view, not the master
@@ -24,7 +30,7 @@ Route::controller(HomeController::class)->group(function(){
 
 Route::controller(ServiceController::class)->group(function(){
     Route::get('/service','index')->name('service');
-    Route::get('/service/register-New-License','register')->name('register-new-license');
+    // Route::get('/service/register-New-License','register')->name('register-new-license');
     Route::get('/service/renew','renew')->name('renew');
     Route::get('/service/booktest','booktest')->name('booktest');
     Route::get('/service/checkstatus','checkstatus')->name('checkstatus');
@@ -33,8 +39,8 @@ Route::controller(ServiceController::class)->group(function(){
 
 
 Route::controller(UserController::class)->group(function(){
-    Route::get('/login','index')->name('login');
-    Route::get('/login/register','register')->name('register');
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    // Route::get('/login/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::get('/profile','profile')->name('profile');
 });
 
@@ -48,7 +54,48 @@ Route::controller(AboutController::class)->group(function(){
 });
 
 
-Route::controller(CheckoutController::class)->group(function(){
-    Route::get('/checkout', 'checkout')->name('checkout');
-    Route::get('/checkout/payment', 'payment')->name('payment');
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [BookingController::class, 'checkout'])->name('booking.checkout'); // ?permit_number=...
+    Route::post('/checkout/pay', [BookingController::class, 'payKhqr'])->name('booking.payKhqr');
 });
+Route::get('/lang/{locale}', [\App\Http\Controllers\LanguageController::class, 'switch'])->name('lang.switch');
+
+// backend
+// auth'
+Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
+Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/profile', [UserController::class, 'profile'])
+    ->name('profile')
+    ->middleware('auth');
+Route::post('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+
+    return redirect()->route('home');
+})->name('logout');
+// services
+    
+Route::get('/bakong/qr', [BakongController::class, 'generateQR']);
+Route::get('/bakong/check', [BakongController::class, 'checkTransaction']);
+
+Route::get('/service/register-new-license', [DriverRegistrationController::class, 'showRegisterForm'])
+    ->name('register-new-license');
+
+Route::post('/service/register-new-license', [DriverRegistrationController::class, 'store'])
+    ->name('register.license');
+Route::post('/license-renewal', [LicenseRenewalController::class, 'store'])->name('license.renewal');
+Route::post('/book-test', [BookingController::class, 'store'])->name('book.test');
+
+Route::post('/booking/check-payment-ajax', [BookingController::class, 'checkPaymentAjax'])->name('booking.checkPaymentAjax');
+Route::post('/booking/check-payment', [BookingController::class, 'checkPayment'])->name('booking.checkPayment');
+Route::post('/checkout/pay', [BookingController::class, 'payKhqr'])->name('booking.payKhqr');
+Route::get('/booking/success/{permit_number}', [BookingController::class, 'successView'])->name('booking.success');
+Route::get('/booking/history', [App\Http\Controllers\frontend\BookingController::class, 'history'])
+    ->name('booking.history');
+    
+Route::get('/renewal/checkout/{renewal_id}', [LicenseRenewalController::class, 'renewalCheckout'])->name('renewal.checkout');
+Route::post('/renewal/pay', [LicenseRenewalController::class, 'payKhqrForRenewal'])->name('renewal.payKhqr');
+Route::post('/checkout/pay', [BookingController::class, 'payKhqr'])->name('booking.payKhqr');
+Route::post('/renewal/pay', [BookingController::class, 'payKhqr'])->name('renewal.payKhqr');

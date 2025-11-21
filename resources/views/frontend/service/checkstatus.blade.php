@@ -58,6 +58,8 @@
 
     </div>
 </div>
+@guest
+    
 
 <div class="gtco-section">
     <div class="gtco-container">
@@ -108,7 +110,14 @@
 
     </div>
 </div>
+{{-- Login reminder --}}
+<div class="alert alert-info text-center mt-4">
+    Please <a href="{{ route('login') }}">login</a> to register for your new driver’s license.
+</div>
+@endguest
 
+@auth
+    
 <div class="gtco-section">
     <div class="gtco-container">
 
@@ -121,27 +130,66 @@
 
         <div class="row animate-box">
             <div class="col-md-10 col-md-offset-1">
-                <form method="POST">
+
+                <!-- Back to Home -->
+                <div class="text-left" style="margin-bottom: 15px;">
+                <a href="{{ url('/') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                </div>
+
+                <!-- Card Wrapper -->
+                <div class="status-card" style="padding:25px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); background-color:#fff; text-align:justify;">
+                <h4 class="text-primary mb-4 text-center">🔍 Check Your Application Status</h4>
+
+                <form method="POST" action="">
                     @csrf
+
                     <div class="form-group">
-                        <label for="application_id">Application ID</label>
-                        <input type="text" name="application_id" class="form-control" placeholder="Enter your application ID (optional)">
+                    <label for="application_id">Application ID</label>
+                    <input 
+                        type="text" 
+                        name="application_id" 
+                        id="application_id" 
+                        class="form-control" 
+                        placeholder="Enter your application ID (optional)" 
+                        value="{{ old('application_id') }}">
+                    @error('application_id')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
                     </div>
 
                     <div class="form-group">
-                        <label for="phone">Phone Number</label>
-                        <input type="text" name="phone" class="form-control" placeholder="Enter your phone number (optional)">
+                    <label for="phone">Phone Number</label>
+                    <input 
+                        type="text" 
+                        name="phone" 
+                        id="phone" 
+                        class="form-control" 
+                        placeholder="Enter your phone number (optional)" 
+                        value="{{ old('phone') }}">
+                    @error('phone')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
                     </div>
 
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-info btn-block">Check Status</button>
+                    <div class="form-group text-center">
+                    <button type="submit" class="btn btn-primary" style="width: 50%;">
+                        Check Status
+                    </button>
                     </div>
                 </form>
 
-                <p class="text-muted mt-3">Having trouble? Contact support with your name and national ID.</p>
+                <p class="text-muted text-center mt-3">
+                    Having trouble? Contact support with your name and national ID.
+                </p>
+                </div>
+
             </div>
-        </div>
+            </div>
+
 
     </div>
 </div>
+@endauth
 @endsection

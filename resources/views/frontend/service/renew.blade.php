@@ -78,6 +78,8 @@
 
     </div>
 </div>
+@guest
+    
 
 <div class="gtco-section">
     <div class="gtco-container">
@@ -136,6 +138,12 @@
 
     </div>
 </div>
+        <div class="alert alert-info text-center mt-4">
+            Please <a href="{{ route('login') }}">login</a> to register for your new driver’s license.
+        </div>
+      @endguest
+@auth
+    
 
 <div class="gtco-section">
     <div class="gtco-container">
@@ -148,68 +156,87 @@
         </div>
 
         <div class="row animate-box">
-            <div class="col-md-10 col-md-offset-1">
-                <form method="POST" action="" enctype="multipart/form-data">
-                    @csrf
+        <div class="col-md-10 col-md-offset-1">
 
-                    <h4 class="text-light">🧾 License Information</h4>
-                    <div class="form-group">
-                        <label for="current_license_number">Current or Expired License Number <span class="text-danger">*</span></label>
-                        <input type="text" name="current_license_number" class="form-control" required value="{{ old('current_license_number') }}">
-                        @error('current_license_number')
-                            <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <h4 class="text-light">🧍 Personal Information</h4>
-                    <div class="form-group row">
-                        <div class="col-md-6">
-                            <label for="national_id">National ID or Passport <span class="text-danger">*</span></label>
-                            <input type="file" name="national_id" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
-                            @error('national_id')
-                              <small class="text-danger">{{ $message }}</small>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="photo">Recent Passport Photo <span class="text-danger">*</span></label>
-                            <input type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png" required>
-                            @error('photo')
-                              <small class="text-danger">{{ $message }}</small>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="medical_cert">Updated Medical Certificate (If Required)</label>
-                        <input type="file" name="medical_cert" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
-                        @error('medical_cert')
-                          <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <h4 class="text-light">📦 Delivery Options</h4>
-                    <div class="form-group">
-                        <label for="delivery_option">Choose Pickup or Delivery <span class="text-danger">*</span></label>
-                        <select name="delivery_option" class="form-control" required>
-                            <option value="">-- Select Option --</option>
-                            <option value="pickup" {{ old('delivery_option') == 'pickup' ? 'selected' : '' }}>Pickup</option>
-                            <option value="delivery" {{ old('delivery_option') == 'delivery' ? 'selected' : '' }}>Delivery</option>
-                        </select>
-                        @error('delivery_option')
-                          <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-success btn-block">
-                            Submit Renewal
-                        </button>
-                    </div>
-                </form>
+            <!-- Back to Home -->
+            <div class="text-left" style="margin-bottom: 15px;">
+            <a href="{{ url('/') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
             </div>
+            @if(session('success'))
+                <div class="alert alert-success text-center">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            <!-- Card Wrapper -->
+            <div class="renewal-card" style="padding:25px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); background-color:#fff; text-align:justify;">
+            <form method="POST" action="{{ route('license.renewal') }}" enctype="multipart/form-data">
+                @csrf
+
+                <h4 class="text-primary">🧾 License Information</h4>
+                <div class="form-group">
+                <label for="current_license_number">Current or Expired License Number <span class="text-danger">*</span></label>
+                <input type="text" name="current_license_number" class="form-control" required value="{{ old('current_license_number') }}">
+                @error('current_license_number')
+                    <small class="text-danger">{{ $message }}</small>
+                @enderror
+                </div>
+                
+                <h4 class="text-primary">🧍 Personal Information</h4>
+                <div class="form-group row">
+                <div class="col-md-6">
+                    <label for="national_id">National ID or Passport <span class="text-danger">*</span></label>
+                    <input type="file" name="national_id" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                    @error('national_id')
+                    <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+
+                <div class="col-md-6">
+                    <label for="photo">Recent Passport Photo <span class="text-danger">*</span></label>
+                    <input type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png" required>
+                    @error('photo')
+                    <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+                </div>
+{{-- 
+                <div class="form-group">
+                <label for="medical_cert">Updated Medical Certificate (If Required)</label>
+                <input type="file" name="medical_cert" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                @error('medical_cert')
+                    <small class="text-danger">{{ $message }}</small>
+                @enderror
+                </div> --}}
+
+                <h4 class="text-primary">📦 Delivery Options</h4>
+                <div class="form-group">
+                <label for="delivery_option">Choose Pickup or Delivery <span class="text-danger">*</span></label>
+                <select name="delivery_option" class="form-control" required>
+                    <option value="">-- Select Option --</option>
+                    <option value="pickup" {{ old('delivery_option') == 'pickup' ? 'selected' : '' }}>Pickup</option>
+                    <option value="delivery" {{ old('delivery_option') == 'delivery' ? 'selected' : '' }}>Delivery</option>
+                </select>
+                @error('delivery_option')
+                    <small class="text-danger">{{ $message }}</small>
+                @enderror
+                </div>
+
+                <div class="form-group text-center">
+                <button type="submit" class="btn btn-primary" style="width: 50%;">
+                    Submit Renewal
+                </button>
+                </div>
+            </form>
+            </div>
+
         </div>
+        </div>
+
 
     </div>
 </div>
+@endauth
 @endsection

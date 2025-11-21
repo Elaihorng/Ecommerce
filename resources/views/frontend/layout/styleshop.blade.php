@@ -11,7 +11,19 @@
 
 	<!-- Font Awesome CDN -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+	<link
+	rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+	crossorigin="anonymous"
+	/>
 
+	<link
+	rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+	integrity="sha512-7L9t9PzZBTvTzptMZyF7hF+eVErqjYlC1uLxXf9pL2TstMez4mQ8A3xXq/4L9z6OeX0M5QF5+okxWbKhbBTK0A=="
+	crossorigin="anonymous"
+	referrerpolicy="no-referrer"
+	/>
 
 	<!-- Magnific Popup -->
 	<link rel="stylesheet" href="{{asset('frontend/assets/css/magnific-popup.css')}}">

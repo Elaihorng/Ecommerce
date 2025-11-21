@@ -1,59 +1,93 @@
+<footer id="gtco-footer" class="py-5" style="background-color:#0d1b2a; color:#e0e1dd;">
+  <div class="gtco-container">
+    <div class="row">
 
-	<footer id="gtco-footer" role="contentinfo">
-		<div class="gtco-container">
-			<div class="row row-p	b-md">
-
-				<div class="col-md-4">
-					<div class="gtco-widget">
-						<h3>About Us</h3>
-						<p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempore eos molestias quod sint ipsum possimus temporibus officia iste perspiciatis consectetur in fugiat repudiandae cum. Totam cupiditate nostrum ut neque ab?</p>
-					</div>
-				</div>
-
-				<div class="col-md-4 col-md-push-1">
-					<div class="gtco-widget">
-						<h3>Links</h3>
-						<ul class="gtco-footer-links">
-							<li><a href="#">Knowledge Base</a></li>
-							<li><a href="#">Career</a></li>
-							<li><a href="#">Press</a></li>
-							<li><a href="#">Terms of services</a></li>
-							<li><a href="#">Privacy Policy</a></li>
-						</ul>
-					</div>
-				</div>
-
-				<div class="col-md-4">
-					<div class="gtco-widget">
-						<h3>Get In Touch</h3>
-						<ul class="gtco-quick-contact">
-							<li><a href="#"><i class="icon-phone"></i> +1 234 567 890</a></li>
-							<li><a href="#"><i class="icon-mail2"></i> info@gettemplates.co</a></li>
-							<li><a href="#"><i class="icon-chat"></i> Live Chat</a></li>
-						</ul>
-					</div>
-				</div>
-
-			</div>
-
-			<div class="row copyright">
-				<div class="col-md-12">
-					<p class="pull-left">
-						<small class="block">&copy; 2016 Free HTML5. All Rights Reserved.</small> 
-						<small class="block">Designed by <a href="http://gettemplates.co/" target="_blank">GetTemplates.co</a> Demo Images: <a href="http://unsplash.co/" target="_blank">Unsplash</a></small>
-					</p>
-					<p class="pull-right">
-						<ul class="gtco-social-icons pull-right">
-							<li><a href="#"><i class="icon-twitter"></i></a></li>
-							<li><a href="#"><i class="icon-facebook"></i></a></li>
-							<li><a href="#"><i class="icon-linkedin"></i></a></li>
-							<li><a href="#"><i class="icon-dribbble"></i></a></li>
-						</ul>
-					</p>
-				</div>
-			</div>
-
-       
-
+      <!-- About Us -->
+      <div class="col-md-4 mb-4">
+		<div class="gtco-widget">
+			<h3 style="color:#fff; font-weight:600; letter-spacing:0.5px; margin-bottom:15px;">About Us</h3>
+			<p style="
+			color:#c9c9c9;
+			font-size:15px;
+			line-height:1.7;
+			text-align:left;
+			margin-bottom:0;
+			">
+			We are dedicated to making driver’s license management simple and accessible. 
+			Our platform lets you register, renew, and track your application status 
+			conveniently all in one place, with transparency and ease.
+			</p>
 		</div>
-	</footer>
+	  </div>
+
+
+      <!-- Useful Links -->
+      <div class="col-md-4 mb-4">
+        <div class="gtco-widget">
+          <h3 style="color:#fff; font-weight:600;">Quick Links</h3>
+          <ul class="list-unstyled" style="line-height:1.8;">
+			<li><a href="#" style="color:#c9c9c9; text-decoration:none;"
+					onmouseover="this.style.color='#29407d';"
+					onmouseout="this.style.color='#c9c9c9';">Knowledge Base</a></li>
+			<li><a href="#" style="color:#c9c9c9; text-decoration:none;"
+					onmouseover="this.style.color='#29407d';"
+					onmouseout="this.style.color='#c9c9c9';">Career</a></li>
+			<li><a href="#" style="color:#c9c9c9; text-decoration:none;"
+					onmouseover="this.style.color='#29407d';"
+					onmouseout="this.style.color='#c9c9c9';">Press</a></li>
+			<li><a href="#" style="color:#c9c9c9; text-decoration:none;"
+					onmouseover="this.style.color='#29407d';"
+					onmouseout="this.style.color='#c9c9c9';">Terms of Service</a></li>
+			<li><a href="#" style="color:#c9c9c9; text-decoration:none;"
+					onmouseover="this.style.color='#29407d';"
+					onmouseout="this.style.color='#c9c9c9';">Privacy Policy</a></li>
+		   </ul>
+
+        </div>
+      </div>
+
+		<!-- Contact -->
+		<div class="col-md-4 mb-4">
+		<div class="gtco-widget">
+			<h3 style="color:#fff; font-weight:600;">Get In Touch</h3>
+			<ul class="list-unstyled" style="line-height:1.8;">
+			<li><i class="fas fa-phone-alt"></i> +855 12 999 999</li>
+			<li><i class="fas fa-envelope"></i> info@elicense.gov.kh</li>
+			<li><i class="fas fa-comments"></i> Live Chat Support</li>
+			</ul>
+		</div>
+
+		<!-- Social Icons -->
+		<div class="mt-3">
+			<a href="#" class="me-2" style="color:#fff; font-size:20px; margin-right:10px;">
+			<i class="fab fa-facebook-f"></i>
+			</a>
+			<a href="#" class="me-2" style="color:#fff; font-size:20px; margin-right:10px;">
+			<i class="fab fa-twitter"></i>
+			</a>
+			<a href="#" class="me-2" style="color:#fff; font-size:20px; margin-right:10px;">
+			<i class="fab fa-linkedin-in"></i>
+			</a>
+			<a href="#" style="color:#fff; font-size:20px;">
+			<i class="fab fa-instagram"></i>
+			</a>
+		</div>
+		</div>
+
+
+    <!-- Divider -->
+    <hr style="border-color:#1b263b;">
+
+    <!-- Bottom Footer -->
+    <div class="row">
+      <div class="col-md-12 text-center">
+        <small style="color:#a5a5a5;">
+          &copy; {{ date('Y') }} Driver’s License Service. All Rights Reserved.
+        </small><br>
+        <small style="color:#a5a5a5;">
+          Designed with ❤️ by <a href="#" style="color:#fff; text-decoration:none;">ST5-GROUP6</a>
+        </small>
+      </div>
+    </div>
+  </div>
+</footer>

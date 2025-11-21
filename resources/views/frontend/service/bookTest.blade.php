@@ -68,6 +68,8 @@
 
     </div>
 </div>
+@guest
+    
 
 <div class="gtco-section">
     <div class="gtco-container">
@@ -118,6 +120,13 @@
 
     </div>
 </div>
+{{-- Login reminder --}}
+<div class="alert alert-info text-center mt-4">
+    Please <a href="{{ route('login') }}">login</a> to register for your new driver’s license.
+</div>
+@endguest
+@auth
+    
 
 <div class="gtco-section">
     <div class="gtco-container">
@@ -130,56 +139,95 @@
         </div>
 
         <div class="row animate-box">
-            <div class="col-md-10 col-md-offset-1" >
-                <form method="POST" >
+            <div class="col-md-10 col-md-offset-1">
+
+                <!-- Back to Home -->
+                <div class="text-left" style="margin-bottom: 15px;">
+                <a href="{{ url('/') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+                </div>
+                @if(session('success'))
+                    <div class="alert alert-success text-center">
+                        {{ session('success') }}
+                    </div>
+                @endif
+                <!-- Card Wrapper -->
+                <div class="booking-card" style="padding:25px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.1); background-color:#fff; text-align:justify;">
+                <form method="POST" action="{{ route('book.test') }}">
                     @csrf
 
+                    <h4 class="text-primary mb-4">🚗 Driving Test Booking Form</h4>
+
                     <div class="form-group">
-                        <label for="permit_number">Learner’s Permit Number <span class="text-danger">*</span></label>
-                        <input type="text" name="permit_number" class="form-control" required value="{{ old('permit_number') }}">
-                        @error('permit_number')
-                            <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                    <label for="permit_number">Learner’s Permit Number <span class="text-danger">*</span></label>
+                    <input 
+                        type="text" 
+                        name="permit_number" 
+                        id="permit_number" 
+                        class="form-control" 
+                        required 
+                        value="{{ old('permit_number') }}">
+                    @error('permit_number')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                    </div>
+
+                    {{-- <div class="form-group">
+                    <label for="test_center">Test Center Location <span class="text-danger">*</span></label>
+                    <select name="test_center" id="test_center" class="form-control" required>
+                        <option value="">-- Select Location --</option>
+                        <option value="phnom_penh" {{ old('test_center') == 'phnom_penh' ? 'selected' : '' }}>Phnom Penh</option>
+                        <option value="siem_reap" {{ old('test_center') == 'siem_reap' ? 'selected' : '' }}>Siem Reap</option>
+                        <option value="battambang" {{ old('test_center') == 'battambang' ? 'selected' : '' }}>Battambang</option>
+                    </select>
+                    @error('test_center')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                    </div> --}}
+
+                    <div class="form-group">
+                    <label for="test_date">Preferred Date <span class="text-danger">*</span></label>
+                    <input 
+                        type="date" 
+                        name="test_date" 
+                        id="test_date" 
+                        class="form-control" 
+                        required 
+                        min="{{ now()->toDateString() }}"
+                        value="{{ old('test_date') }}">
+                    @error('test_date')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
                     </div>
 
                     <div class="form-group">
-                        <label for="test_center">Test Center Location <span class="text-danger">*</span></label>
-                        <select name="test_center" class="form-control" required>
-                            <option value="">-- Select Location --</option>
-                            <option value="phnom_penh">Phnom Penh</option>
-                            <option value="siem_reap">Siem Reap</option>
-                            <option value="battambang">Battambang</option>
-                        </select>
-                        @error('test_center')
-                          <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                    <label for="test_time">Preferred Time <span class="text-danger">*</span></label>
+                    <input 
+                        type="time" 
+                        name="test_time" 
+                        id="test_time" 
+                        class="form-control" 
+                        required 
+                        value="{{ old('test_time') }}">
+                    @error('test_time')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
                     </div>
 
-                    <div class="form-group">
-                        <label for="test_date">Preferred Date <span class="text-danger">*</span></label>
-                        <input type="date" name="test_date" class="form-control" required value="{{ old('test_date') }}">
-                        @error('test_date')
-                          <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label for="test_time">Preferred Time <span class="text-danger">*</span></label>
-                        <input type="time" name="test_time" class="form-control" required value="{{ old('test_time') }}">
-                        @error('test_time')
-                          <small class="text-danger">{{ $message }}</small>
-                        @enderror
-                    </div>
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-success btn-block">
-                            Book Test Appointment
-                        </button>
+                    <div class="form-group text-center">
+                    <button type="submit" class="btn btn-primary" style="width: 50%;">
+                        Book Test Appointment
+                    </button>
                     </div>
                 </form>
             </div>
-        </div>
+
+            </div>
+            </div>
+
 
     </div>
 </div>
+@endauth
 @endsection

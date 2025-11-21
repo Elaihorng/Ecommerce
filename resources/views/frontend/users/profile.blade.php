@@ -26,20 +26,31 @@
         height: 150px;
         object-fit: cover;
     }
+    /* Make text justified */
+    .card-body, 
+    .tab-pane, 
+    .list-unstyled li, 
+    p, 
+    div.col-sm-8 {
+        text-align: justify;
+    }
 </style>
 
 <div class="gtco-section border-bottom">
     <div class="gtco-container">
         <div class="row animate-box">
+        @auth
+                
+            
             <div class="col-md-12 text-center gtco-heading">
-                <h2>Welcome, John Doe</h2>
+                <h2>Welcome, {{ $user->full_name }}</h2>
             </div>
         </div>
 
         <div class="row">
             <!-- Left Column -->
-            <div class="col-md-4">
-                <div class="card">
+            <div class="col-md-4" >
+                <div class="card" style="padding: 30px;">
                     <div class="text-center p-3">
                         <img src="https://bootdey.com/img/Content/avatar/avatar7.png" class="rounded-circle profile-pic" alt="User photo">
                         <p class="mt-2 mb-0 text-muted"><a href="#"><i class="fas fa-camera"></i> Change Photo</a></p>
@@ -68,15 +79,18 @@
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between">
+                       <div class="d-flex justify-content-between" style="padding:30px;">
                             <div>
                                 <h4>John Doe</h4>
                                 <p class="text-primary">Citizen of Cambodia</p>
                             </div>
-                            <button class="btn btn-outline-primary"><i class="fas fa-edit"></i> Edit Profile</button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Edit Profile
+                            </button>
                         </div>
-                        <p class="text-muted mb-1">Your Digital Driver's License Dashboard</p>
-                        <hr>
+                        <p class="text-muted mb-1" style="padding: 10px;">Your Digital Driver's License Dashboard</p>
+                        <hr style="margin: 10px;">
+
 
                         <ul class="nav nav-tabs" id="myTab" role="tablist">
                             <li class="nav-item">
@@ -90,28 +104,32 @@
                             </li>
                         </ul>
 
-                        <div class="tab-content pt-3">
+                        <div class="tab-content pt-3"style="padding: 30px;">
                             <!-- About -->
                             <div class="tab-pane fade show active" id="about" role="tabpanel">
                                 <div class="row">
                                     <div class="col-sm-4"><strong>User ID</strong></div>
-                                    <div class="col-sm-8">CD12345678</div>
+                                    <div class="col-sm-8">{{ $user->id }}</div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-sm-4"><strong>Name</strong></div>
-                                    <div class="col-sm-8">John Doe</div>
+                                    <div class="col-sm-4"><strong>Full Name</strong></div>
+                                    <div class="col-sm-8">{{ $user->full_name }}</div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-4"><strong>Gender</strong></div>
+                                    <div class="col-sm-8">{{ $user->gender }}</div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-4"><strong>Email</strong></div>
-                                    <div class="col-sm-8">johndoe@email.com</div>
+                                    <div class="col-sm-8">{{ $user->email }}m</div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-4"><strong>Phone</strong></div>
-                                    <div class="col-sm-8">+855 12 345 678</div>
+                                    <div class="col-sm-8">{{ $user->phone }}</div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-4"><strong>Address</strong></div>
-                                    <div class="col-sm-8">Phnom Penh, Cambodia</div>
+                                    <div class="col-sm-8">{{ $user->address }}</div>
                                 </div>
                             </div>
 
@@ -142,10 +160,11 @@
                                 <a href="#" class="btn btn-secondary ml-2"><i class="fas fa-print"></i> Print ID Card</a>
                             </div>
                         </div>
-
+                        
                     </div>
                 </div>
             </div>
+            @endauth
         </div>
     </div>
 </div>

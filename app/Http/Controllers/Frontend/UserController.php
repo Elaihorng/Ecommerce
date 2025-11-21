@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\frontend;
-
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -16,7 +16,9 @@ class UserController extends Controller
         return view('frontend.users.register');
     }
 
-    public function  profile(){
-        return view('frontend.users.profile');
+     public function profile()
+    {
+        $user = Auth::user(); // get logged-in user
+        return view('frontend.users.profile', compact('user'));
     }
 }

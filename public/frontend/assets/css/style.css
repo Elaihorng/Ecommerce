@@ -217,7 +217,7 @@ h1, h2, h3, h4, h5, h6, figure {
   display: -moz-inline-stack;
   display: inline-block;
   zoom: 1;
-  *display: inline;
+  display: inline;
   -webkit-transition: 0.3s;
   -o-transition: 0.3s;
   transition: 0.3s;
@@ -461,13 +461,13 @@ h1, h2, h3, h4, h5, h6, figure {
   display: -moz-inline-stack;
   display: inline-block;
   zoom: 1;
-  *display: inline;
+  display: inline;
 }
 .gtco-social-icons li a {
   display: -moz-inline-stack;
   display: inline-block;
   zoom: 1;
-  *display: inline;
+  display: inline;
   color: #17B794;
   padding-left: 10px;
   padding-right: 10px;
@@ -765,7 +765,7 @@ form label {
   display: -moz-inline-stack;
   display: inline-block;
   zoom: 1;
-  *display: inline;
+  display: inline;
 }
 #gtco-products .testimony-slide figure img {
   width: 90px;
@@ -822,7 +822,7 @@ form label {
   display: -moz-inline-stack;
   display: inline-block;
   zoom: 1;
-  *display: inline;
+  display: inline;
 }
 .gtco-tabs .gtco-tab-nav li .icon {
   font-size: 30px;
@@ -985,7 +985,7 @@ form label {
   display: -moz-inline-stack;
   display: inline-block;
   zoom: 1;
-  *display: inline;
+  display: inline;
 }
 @media screen and (max-width: 768px) {
   #gtco-footer .copyright .pull-left,
@@ -1109,7 +1109,7 @@ form label {
   width: 50px;
   height: 50px;
   display: table;
-  background: rgba(0, 0, 0, 0.5);
+  background: #29407d;
   color: #fff;
   text-align: center;
   -webkit-border-radius: 4px;
@@ -1254,21 +1254,21 @@ form label {
 }
 
 .btn-primary {
-  background: #17B794;
+  background: #29407d;
   color: #fff;
-  border: 2px solid #17B794 !important;
+  border: 2px solid #29407d !important;
 }
 .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
-  background: #1acea6 !important;
-  border-color: #1acea6 !important;
+  background: #29407d !important;
+  border-color: #29407d !important;
 }
 .btn-primary.btn-outline {
   background: transparent;
-  color: #17B794;
-  border: 2px solid #17B794;
+  color: #29407d;
+  border: 2px solid #29407d;
 }
 .btn-primary.btn-outline:hover, .btn-primary.btn-outline:focus, .btn-primary.btn-outline:active {
-  background: #17B794;
+  background: #29407d;
   color: #fff;
 }
 
@@ -1359,12 +1359,12 @@ form label {
   border-color: #f2f2f2 !important;
 }
 .btn-white.btn-outline {
-  color: #29407d;
-  border: 2px solid #29407d;
+  color: #ffffff;
+  border: 2px solid #ffffff;
 }
 .btn-white.btn-outline:hover, .btn-white.btn-outline:focus, .btn-white.btn-outline:active {
   background: #fff;
-  color: #000;
+  color: #29407d;
   border: 2px solid #fff;
 }
 

@@ -12,7 +12,7 @@
 									<h2 class="animate-box" data-animate-effect="fadeInUp">Welcome to Cambodia’s official online platform for driver’s license services. 
 										Whether you're a new applicant or an 
 														existing license holder, our all-in-one system is designed to simplify your journey.</h2>
-									<p class="animate-box" data-animate-effect="fadeInUp"><a href="#" class="btn btn-white btn-lg btn-outline">Start Now</a></p>
+									<p class="animate-box" data-animate-effect="fadeInUp"><a href="{{route('login')}}" class="btn btn-white btn-lg btn-outline">Start Now</a></p>
 								</div>
 							</div>
 						</div>
@@ -38,7 +38,7 @@
 								</span>
 								<h3>Renew</h3>
 								<p>Renew your expired or soon-to-expire driver’s license quickly and conveniently—no need to wait in line or visit a government office. Our online renewal system is secure, simple, and saves you time.</p>
-								<p><a href="#" class="btn btn-white btn-outline">Learn More</a></p>
+								<p><a href="{{route('renew')}}" class="btn btn-white btn-outline">Learn More</a></p>
 							</div>
 						</div>
 						<div class="feature feature-2 animate-box" data-animate-effect="fadeInUp">
@@ -49,7 +49,7 @@
 								</span>
 								<h3>Book Test</h3>
 								<p>Easily schedule your driver’s license exam online—choose the time and test center that works best for you.</p>
-								<p><a href="#" class="btn btn-white btn-outline">Learn More</a></p>
+								<p><a href="{{ route('booktest') }}" class="btn btn-white btn-outline">Learn More</a></p>
 							</div>
 						</div>
 						<div class="feature feature-3 animate-box" data-animate-effect="fadeInUp">
@@ -59,7 +59,7 @@
 								</span>
 								<h3>Register</h3>
 								<p>Applying for your first driver’s license has never been easier. Our online registration system guides you through every step — from account creation to exam booking — without needing to visit the office in person. </p>
-								<p><a href="#" class="btn btn-white btn-outline">Learn More</a></p>
+								<p><a href="{{ route('checkstatus') }}" class="btn btn-white btn-outline">Learn More</a></p>
 							</div>
 						</div>
 					</div>
