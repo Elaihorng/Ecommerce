@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="gtco-section border-bottom">
-    
+
     <div class="gtco-container py-5">
         <div class="text-left">
           <a href="{{ url('/') }}" class="btn btn-outline-secondary back-btn">
@@ -23,21 +23,23 @@
             <div class="alert alert-info text-center">You don’t have any bookings yet.</div>
         @else
             <div class="table-responsive">
-                <table class="table table-bordered table-hover text-center align-middle shadow-sm" style="vertical-align: middle;">
+                <table class="table table-bordered table-hover text-center align-middle shadow-sm table-fixed">
                     <thead class="table-dark text-uppercase">
                         <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Permit Number</th>
-                            <th>Test Center</th>
-                            <th>License Type</th>
-                            <th>Application Type</th>
-                            <th>Test Date</th>
-                            <th>Test Time</th>
-                            <th>Booking Status</th>
-                            <th>Payment</th>
-                            <th>Test Results</th>
+                            <th class="col-id">#</th>
+                            <th class="col-permit">Permit Number</th>
+                            <th class="col-center">Test Center</th>
+                            <th class="col-license">License Type</th>
+                            <th class="col-app">Application Type</th>
+                            <th class="col-date">Test Date</th>
+                            <th class="col-time">Test Time</th>
+                            <th class="col-status">Booking Status</th>
+                            <th class="col-payment">Payment</th>
+                            <th class="col-results">Test Results</th>
+                            <th class="col-action">Action</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         @foreach($bookings as $index => $booking)
                             <tr>
@@ -87,6 +89,15 @@
                                         <span class="text-muted">Not tested</span>
                                     @endif
                                 </td>
+
+                                {{-- Action --}}
+                                <td>
+                                    <a href="{{ route('booking.history.detail', $booking->booking_id) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        View
+                                    </a>
+                                </td>
+
                             </tr>
                         @endforeach
                     </tbody>
@@ -96,23 +107,33 @@
     </div>
 </div>
 
-{{-- Optional styling to make the table perfectly justified --}}
 <style>
-    table th, table td {
-        text-align: center;
+    /* Let browser auto-handle column widths */
+    .table-fixed {
+        width: 100%;
+        table-layout: auto;  /* or just remove this class from the table */
+    }
+
+    /* Allow content to wrap so it doesn’t stretch too wide */
+    table td, table th {
+        word-wrap: break-word;
+        white-space: normal;
         vertical-align: middle !important;
+        text-align: center;
+        font-size: 14px;
+        padding: 8px 6px;
     }
-    table th {
-        white-space: nowrap;
-    }
+
     .table {
-        font-size: 15px;
         border-radius: 10px;
-        overflow: hidden;
+        font-size: 14px;
     }
+
     .badge {
-        border-radius: 10px;
-        font-size: 13px;
+        font-size: 12px;
+        border-radius: 8px;
     }
 </style>
+
+
 @endsection

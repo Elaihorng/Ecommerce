@@ -11,6 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\BookingSuccessMail;
+
 
 class BookingController extends Controller
 {
@@ -144,7 +147,6 @@ class BookingController extends Controller
             'amount'        => 'required|integer|min:1',
             'currency'      => 'required|in:KHR,USD',
         ]);
-
         // Decide flow
         $isRenewal = !empty($data['renewal_id']);
         $isBooking = !empty($data['permit_number']);
@@ -336,13 +338,18 @@ class BookingController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                DB::table('bookings')->where('id', $booking->id)->update([
-                    'b_status' => 'paid',
-                    'updated_at' => now(),
-                ]);
+                // 🔹 Get user + application and send email
+                $user = DB::table('users')->where('id', $booking->user_id)->first();
+                $application = DB::table('applications')->where('id', $booking->application_id)->first();
+
+                if ($user && !empty($user->email)) {
+                    Mail::to($user->email)->send(new BookingSuccessMail($user, $booking, $application));
+
+                }
 
                 return redirect()->route('booking.success', ['permit_number' => $request->permit_number]);
             }
+
 
             return back()->with('info', 'Payment not yet confirmed. Please try again later.');
         } catch (\Throwable $e) {
@@ -391,78 +398,79 @@ class BookingController extends Controller
 
         // Otherwise call Bakong to verify
        try {
-    $client = new BakongKHQR(env('BAKONG_TOKEN'));
-    $res = $client->checkTransactionByMD5($payment->khqr_md5);
+            $client = new BakongKHQR(env('BAKONG_TOKEN'));
+            $res = $client->checkTransactionByMD5($payment->khqr_md5);
 
-    \Log::info('bakong.checkTransactionByMD5 response', ['res' => $res, 'payment_id' => $payment->id]);
+            \Log::info('bakong.checkTransactionByMD5 response', ['res' => $res, 'payment_id' => $payment->id]);
 
-    // Normalize to array and find the most relevant fields
-    $arr = is_array($res) ? $res : (array) $res;
+            // Normalize to array and find the most relevant fields
+            $arr = is_array($res) ? $res : (array) $res;
 
-    // If provider returns envelope keys like responseCode/responseMessage and data
-    $responseCode = $arr['responseCode'] ?? $arr['ResponseCode'] ?? null;
-    $responseMessage = $arr['responseMessage'] ?? $arr['ResponseMessage'] ?? null;
-    $inner = $arr['data'] ?? ($arr['Data'] ?? []);
+            // If provider returns envelope keys like responseCode/responseMessage and data
+            $responseCode = $arr['responseCode'] ?? $arr['ResponseCode'] ?? null;
+            $responseMessage = $arr['responseMessage'] ?? $arr['ResponseMessage'] ?? null;
+            $inner = $arr['data'] ?? ($arr['Data'] ?? []);
 
-    if (is_object($inner)) $inner = (array) $inner;
+            if (is_object($inner)) $inner = (array) $inner;
 
-    // Extract useful fields
-    $hash = $inner['hash'] ?? $inner['md5'] ?? $inner['khqr_md5'] ?? null;
-    $txid = $inner['externalRef'] ?? $inner['transaction_id'] ?? $inner['tx_id'] ?? null;
-    $ackMs = $inner['acknowledgedDateMs'] ?? $inner['ackMs'] ?? null;
+            // Extract useful fields
+            $hash = $inner['hash'] ?? $inner['md5'] ?? $inner['khqr_md5'] ?? null;
+            $txid = $inner['externalRef'] ?? $inner['transaction_id'] ?? $inner['tx_id'] ?? null;
+            $ackMs = $inner['acknowledgedDateMs'] ?? $inner['ackMs'] ?? null;
 
-    \Log::info('bakong.parsed', [
-        'responseCode' => $responseCode,
-        'responseMessage' => $responseMessage,
-        'hash' => $hash,
-        'txid' => $txid,
-        'ackMs' => $ackMs,
-        'payment_id' => $payment->id
-    ]);
+            \Log::info('bakong.parsed', [
+                'responseCode' => $responseCode,
+                'responseMessage' => $responseMessage,
+                'hash' => $hash,
+                'txid' => $txid,
+                'ackMs' => $ackMs,
+                'payment_id' => $payment->id
+            ]);
 
-    // Decide success: provider indicates success when responseCode === 0 OR responseMessage contains 'success'
-    $isSuccess = false;
-    if ($responseCode !== null && (int)$responseCode === 0) $isSuccess = true;
-    if (! $isSuccess && $responseMessage !== null && stripos((string)$responseMessage, 'success') !== false) $isSuccess = true;
-    // Also treat presence of acknowledgedDateMs (acknowledged timestamp) as success
-    if (! $isSuccess && !empty($ackMs)) $isSuccess = true;
+            // Decide success: provider indicates success when responseCode === 0 OR responseMessage contains 'success'
+            $isSuccess = false;
+            if ($responseCode !== null && (int)$responseCode === 0) $isSuccess = true;
+            if (! $isSuccess && $responseMessage !== null && stripos((string)$responseMessage, 'success') !== false) $isSuccess = true;
+            // Also treat presence of acknowledgedDateMs (acknowledged timestamp) as success
+            if (! $isSuccess && !empty($ackMs)) $isSuccess = true;
 
-    if ($isSuccess) {
-        DB::table('payments')->where('id', $payment->id)->update([
-            'p_status' => 'paid',
-            'provider_payment_id' => $txid ?? $payment->provider_payment_id ?? $payment->khqr_md5,
-            'paid_at' => now(),
-            'updated_at' => now(),
-        ]);
+            if ($isSuccess) {
+                DB::table('payments')->where('id', $payment->id)->update([
+                    'p_status' => 'paid',
+                    'provider_payment_id' => $txid ?? $payment->provider_payment_id ?? $payment->khqr_md5,
+                    'paid_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-        // // Update booking: prefer booking (if present), else use application_id, else renewal_id
-        // if (!empty($booking) && !empty($booking->id)) {
-        //     DB::table('bookings')->where('id', $booking->id)->update([
-        //         'b_status' => 'paid',
-        //         'updated_at' => now(),
-        //     ]);
-        // } elseif (!empty($payment->application_id)) {
-        //     DB::table('bookings')->where('application_id', $payment->application_id)->update([
-        //         'b_status' => 'paid',
-        //         'updated_at' => now(),
-        //     ]);
-        // } elseif (!empty($payment->renewal_id)) {
-        //     DB::table('license_renewals')->where('id', $payment->renewal_id)->update([
-        //         'status' => 'paid',
-        //         'updated_at' => now(),
-        //     ]);
-        // }
+                if (!empty($payment->application_id)) {
+                    $booking = DB::table('bookings')->where('application_id', $payment->application_id)->latest('id')->first();
+                    $user = DB::table('users')->where('id', $booking->user_id)->first();
+                    $application = DB::table('applications')->where('id', $payment->application_id)->first();
 
-        \Log::info('Payment marked paid (via checkTransactionByMD5)', ['payment_id' => $payment->id, 'txid' => $txid]);
-        return response()->json(['status' => 'paid']);
-    }
+                    if ($user && !empty($user->email)) {
+                        try {
+                           Mail::to($user->email)->send(new BookingSuccessMail($user, $booking, $application));
 
-    // Not successful yet: return pending with parsed info for debugging
-    return response()->json(['status' => 'pending', 'raw' => $inner]);
-} catch (\Throwable $e) {
-    \Log::error('checkPaymentAjax exception', ['msg' => $e->getMessage(), 'payment_id' => $payment->id ?? null]);
-    return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
-}
+                        } catch (\Throwable $e) {
+                            \Log::error('BookingSuccessMail failed', [
+                                'application_id' => $payment->application_id,
+                                'user_id'        => $user->id ?? null,
+                                'error'          => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+
+                \Log::info('Payment marked paid (via checkTransactionByMD5)', ['payment_id' => $payment->id, 'txid' => $txid]);
+                return response()->json(['status' => 'paid']);
+            }
+
+            // Not successful yet: return pending with parsed info for debugging
+            return response()->json(['status' => 'pending', 'raw' => $inner]);
+        } catch (\Throwable $e) {
+            \Log::error('checkPaymentAjax exception', ['msg' => $e->getMessage(), 'payment_id' => $payment->id ?? null]);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+        }
 
     }
     public function history()
@@ -525,6 +533,37 @@ class BookingController extends Controller
         return view('frontend.booking.history', compact('bookings'));
     }
 
+    public function historyDetail($id)
+    {
+        $booking = DB::table('bookings')
+            ->where('id', $id)
+            ->first();
+
+        if (!$booking) {
+            return redirect()->route('booking.history')
+                ->with('error', 'Booking not found.');
+        }
+
+        $application = DB::table('applications')
+            ->where('id', $booking->application_id)
+            ->first();
+
+        $payment = DB::table('payments')
+            ->where('application_id', $booking->application_id)
+            ->latest('id')
+            ->first();
+
+        $center = DB::table('test_centers')
+            ->where('id', $booking->test_center_id)
+            ->first();
+
+        return view('frontend.booking.history_detail', [
+            'booking'     => $booking,
+            'application' => $application,
+            'payment'     => $payment,
+            'center'      => $center,
+        ]);
+    }
 
     /**
      * Optional success view helper — route can point to this.
@@ -533,4 +572,6 @@ class BookingController extends Controller
     {
         return view('frontend.checkout_payment.success', compact('permit_number'));
     }
+
 }
+

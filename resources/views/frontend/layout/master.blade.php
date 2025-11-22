@@ -35,11 +35,11 @@
 		@include('frontend/layout/header')
 
 		@yield('header')
-		@if (session('success'))
+		{{-- @if (session('success'))
 			<div class="alert alert-success" style="margin-bottom: 15px;">
 				{{ session('success') }}
 			</div>
-		@endif
+		@endif --}}
 		<div class="cintainer">
 
 			@yield('content')

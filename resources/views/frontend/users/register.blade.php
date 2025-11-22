@@ -111,6 +111,9 @@
                 class="form-control" 
                 placeholder="Enter your email"
                 value="{{ old('email') }}">
+                 @error('email')
+                    <small class="text-danger">{{ $message }}</small>
+                @enderror
             </div>
 
             {{-- Phone --}}
@@ -123,6 +126,9 @@
                 class="form-control" 
                 placeholder="Enter your phone number"
                 value="{{ old('phone') }}">
+                 @error('phone')
+                    <small class="text-danger">{{ $message }}</small>
+                @enderror
             </div>
 
             {{-- DOB --}}

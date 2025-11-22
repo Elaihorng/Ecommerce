@@ -81,7 +81,7 @@
                     <div class="card-body">
                        <div class="d-flex justify-content-between" style="padding:30px;">
                             <div>
-                                <h4>John Doe</h4>
+                                <h4> {{ $user->full_name }}</h4>
                                 <p class="text-primary">Citizen of Cambodia</p>
                             </div>
                             <button class="btn btn-outline-primary">

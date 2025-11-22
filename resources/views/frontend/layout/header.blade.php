@@ -52,7 +52,11 @@
 										<li><a href="{{ route('profile') }}"><i class="fas fa-user"></i> {{ auth()->user()->full_name }}</a></li>
 										<li><a href="#"><i class="fas fa-cog"></i> Settings</a></li>
 										<li><a href="{{ route('booking.history') }}"><i class="fas fa-cog"></i> History</a></li>
-
+										<li>
+											<a href="{{ route('license.show') }}">
+												<i class="fa fa-id-card"></i> Your License
+											</a>
+										</li>
 										<li>
 											<form action="{{ route('logout') }}" method="POST" style="display: inline;">
 												@csrf

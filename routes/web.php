@@ -13,6 +13,7 @@ use App\Http\Controllers\frontend\DriverRegistrationController;
 use App\Http\Controllers\frontend\LicenseRenewalController;
 use App\Http\Controllers\frontend\BookingController;
 use App\Http\Controllers\frontend\RegisterController;
+use App\Http\Controllers\frontend\LicenseController;
 use App\Http\Controllers\backend\BakongController;
 
 // Route::get('/', function () {
@@ -33,7 +34,8 @@ Route::controller(ServiceController::class)->group(function(){
     // Route::get('/service/register-New-License','register')->name('register-new-license');
     Route::get('/service/renew','renew')->name('renew');
     Route::get('/service/booktest','booktest')->name('booktest');
-    Route::get('/service/checkstatus','checkstatus')->name('checkstatus');
+    Route::get('/service/checkstatus', [ServiceController::class, 'checkStatusView'])
+    ->name('checkstatus');
     Route::get('/service/checkstatus/download-duc','downloadDucument')->name('downloadDucument');
 });
 
@@ -62,6 +64,9 @@ Route::get('/lang/{locale}', [\App\Http\Controllers\LanguageController::class, '
 
 // backend
 // auth'
+Route::middleware(['auth'])->group(function () {
+    Route::get('/license', [LicenseController::class, 'index'])->name('license.show');
+});
 Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'store'])->name('register.submit');
 Route::post('/login', [AuthController::class, 'login']);
@@ -76,7 +81,10 @@ Route::post('/logout', function () {
     return redirect()->route('home');
 })->name('logout');
 // services
-    
+
+Route::post('/service/checkstatus', [ServiceController::class, 'checkStatus'])
+    ->name('application.status.search');
+
 Route::get('/bakong/qr', [BakongController::class, 'generateQR']);
 Route::get('/bakong/check', [BakongController::class, 'checkTransaction']);
 
@@ -99,3 +107,5 @@ Route::get('/renewal/checkout/{renewal_id}', [LicenseRenewalController::class, '
 Route::post('/renewal/pay', [LicenseRenewalController::class, 'payKhqrForRenewal'])->name('renewal.payKhqr');
 Route::post('/checkout/pay', [BookingController::class, 'payKhqr'])->name('booking.payKhqr');
 Route::post('/renewal/pay', [BookingController::class, 'payKhqr'])->name('renewal.payKhqr');
+Route::get('/booking/history/{id}', [BookingController::class, 'historyDetail'])
+    ->name('booking.history.detail');

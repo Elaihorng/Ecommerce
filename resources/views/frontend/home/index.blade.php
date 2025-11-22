@@ -59,7 +59,7 @@
 								</span>
 								<h3>Register</h3>
 								<p>Applying for your first driver’s license has never been easier. Our online registration system guides you through every step — from account creation to exam booking — without needing to visit the office in person. </p>
-								<p><a href="{{ route('checkstatus') }}" class="btn btn-white btn-outline">Learn More</a></p>
+								<p><a href="{{ route('register.license') }}" class="btn btn-white btn-outline">Learn More</a></p>
 							</div>
 						</div>
 					</div>
