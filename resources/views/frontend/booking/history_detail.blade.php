@@ -31,8 +31,8 @@
                 <tr>
                     <th>Status</th>
                     <td>
-                        @if($booking->b_status === 'paid')
-                            <span class="badge bg-success">Paid</span>
+                        @if($booking->b_status === 'confirmed')
+                            <span class="badge bg-success">Confirmed</span>
                         @else
                             <span class="badge bg-warning">Pending</span>
                         @endif

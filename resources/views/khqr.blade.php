@@ -30,7 +30,11 @@
     .btn { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600; }
     .btn-primary { background:#28a745; color:#fff; }
     .btn-light { background:#fff; color:#222; }
-    @media (max-width:480px){ .card{ width:92%; } .qr-frame img{ width:240px; height:240px; } .currency-badge{ bottom:56px; width:52px; height:52px;} }
+    @media (max-width:480px){
+      .card{ width:92%; }
+      .qr-frame img{ width:240px; height:240px; }
+      .currency-badge{ bottom:56px; width:52px; height:52px;}
+    }
   </style>
 </head>
 <body>
@@ -72,16 +76,21 @@
 
 <script>
 (() => {
-  // backend values (ensure controller passes them)
-  const permit = @json($permit_number ?? null);
-  const md5 = @json($md5 ?? null);
-  const expiresAtIso = @json($expires_at_iso ?? null); // optional from controller
-  const pollUrl = "{{ route('booking.checkPaymentAjax') }}";
-  const successRedirectBase = "{{ url('/booking/success') }}"; // will append permit
+  // ===== backend values =====
+  const permit          = @json($permit_number ?? null);
+  const md5             = @json($md5 ?? null);
+  const expiresAtIso    = @json($expires_at_iso ?? null);
+  const context         = @json($context ?? 'booking');              // 'booking' | 'renewal'
+  const successRedirect = @json($success_redirect ?? null);          // full URL
+  const renewalId       = @json($renewal_id ?? null);                // only for renewal
 
-  // timer: use backend expiry if provided, else fallback 15 min
+  const pollUrl = "{{ route('booking.checkPaymentAjax') }}";         // same endpoint for both
+  const csrf    = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+  // ===== timer =====
   const fallbackSeconds = 15 * 60;
-  let endTime = expiresAtIso ? new Date(expiresAtIso).getTime() : (Date.now() + fallbackSeconds * 1000);
+  let endTime = expiresAtIso ? new Date(expiresAtIso).getTime()
+                             : (Date.now() + fallbackSeconds * 1000);
   const timerEl = document.getElementById('timer');
 
   function updateTimerOnce() {
@@ -92,29 +101,32 @@
       timerEl.style.color = '#fff';
       return true;
     }
-    const m = Math.floor(diff / 60000), s = Math.floor((diff % 60000) / 1000);
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
     timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     return false;
   }
   updateTimerOnce();
   setInterval(updateTimerOnce, 1000);
 
-  // polling config
+  // ===== polling =====
   if (!permit) {
     document.getElementById('statusMsg').textContent = 'Missing permit number.';
     return;
   }
 
-  const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-  let attempts = 0, maxAttempts = 120; // ~6 minutes
-  const intervalMs = 3000;
-  let stopped = false;
+  let attempts   = 0;
+  const maxAttempts = 120; // ~6 minutes
+  const intervalMs  = 3000;
+  let stopped    = false;
 
   async function checkPayment() {
     if (stopped) return;
+
     attempts++;
     if (attempts > maxAttempts) {
-      document.getElementById('statusMsg').textContent = 'Taking too long. Please try again later.';
+      document.getElementById('statusMsg').textContent =
+        'Taking too long. Please try again later.';
       return;
     }
 
@@ -127,36 +139,48 @@
         },
         body: JSON.stringify({ permit_number: permit })
       });
+
       const json = await res.json();
       console.log('check-payment-ajax ->', json);
 
       if (json.status === 'paid') {
-        document.getElementById('statusMsg').textContent = 'Payment confirmed. Redirecting…';
-        document.getElementById('statusMsg').classList.add('success');
+        const msgEl = document.getElementById('statusMsg');
+        msgEl.textContent = 'Payment confirmed. Redirecting…';
+        msgEl.classList.add('success');
         stopped = true;
-        setTimeout(() => window.location.href = successRedirectBase + '/' + encodeURIComponent(permit), 800);
+
+        setTimeout(() => {
+          if (successRedirect) {
+            window.location.href = successRedirect;
+          } else {
+            window.location.reload();
+          }
+        }, 800);
         return;
       }
 
       if (json.status === 'expired') {
-        document.getElementById('statusMsg').textContent = 'QR expired. Please regenerate.';
-        document.getElementById('statusMsg').classList.add('error');
+        const msgEl = document.getElementById('statusMsg');
+        msgEl.textContent = 'QR expired. Please regenerate.';
+        msgEl.classList.add('error');
         stopped = true;
         showRegenerateButton();
         return;
       }
 
       if (json.status === 'not_found') {
-        document.getElementById('statusMsg').textContent = 'No QR found on server. Please try again.';
-        document.getElementById('statusMsg').classList.add('error');
+        const msgEl = document.getElementById('statusMsg');
+        msgEl.textContent = 'No QR found on server. Please try again.';
+        msgEl.classList.add('error');
         stopped = true;
         return;
       }
 
       if (json.status === 'error') {
         console.warn('Payment check error:', json.message);
-        document.getElementById('statusMsg').textContent = 'Temporary error checking payment. Retrying...';
-        document.getElementById('statusMsg').classList.add('error');
+        const msgEl = document.getElementById('statusMsg');
+        msgEl.textContent = 'Temporary error checking payment. Retrying...';
+        msgEl.classList.add('error');
       } else {
         document.getElementById('statusMsg').textContent = 'Waiting for payment...';
       }
@@ -171,12 +195,11 @@
 
   function showRegenerateButton() {
     const actions = document.getElementById('actions');
-    // clear previous actions
     actions.innerHTML = '';
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = "{{ route('booking.payKhqr') }}";
+    form.action = "{{ route('booking.payKhqr') }}"; // same controller, decides by context
     form.style.display = 'inline-block';
 
     const token = document.createElement('input');
@@ -185,11 +208,21 @@
     token.value = '{{ csrf_token() }}';
     form.appendChild(token);
 
-    const permitInput = document.createElement('input');
-    permitInput.type = 'hidden';
-    permitInput.name = 'permit_number';
-    permitInput.value = permit;
-    form.appendChild(permitInput);
+    // booking -> use permit_number
+    // renewal -> use renewal_id
+    if (context === 'renewal') {
+      const renewalInput = document.createElement('input');
+      renewalInput.type = 'hidden';
+      renewalInput.name = 'renewal_id';
+      renewalInput.value = renewalId ?? '';
+      form.appendChild(renewalInput);
+    } else {
+      const permitInput = document.createElement('input');
+      permitInput.type = 'hidden';
+      permitInput.name = 'permit_number';
+      permitInput.value = permit;
+      form.appendChild(permitInput);
+    }
 
     const amountInput = document.createElement('input');
     amountInput.type = 'hidden';
@@ -209,13 +242,17 @@
     btn.textContent = 'Regenerate QR';
     form.appendChild(btn);
 
-    // optional: add manual check button as well
     const checkBtn = document.createElement('button');
     checkBtn.type = 'button';
     checkBtn.className = 'btn btn-light';
     checkBtn.style.marginLeft = '8px';
     checkBtn.textContent = 'Check Payment';
-    checkBtn.onclick = () => { stopped = false; attempts = 0; document.getElementById('statusMsg').textContent = 'Retrying...'; checkPayment(); };
+    checkBtn.onclick = () => {
+      stopped = false;
+      attempts = 0;
+      document.getElementById('statusMsg').textContent = 'Retrying...';
+      checkPayment();
+    };
 
     actions.appendChild(form);
     actions.appendChild(checkBtn);

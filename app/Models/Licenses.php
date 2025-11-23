@@ -13,7 +13,7 @@ class Licenses extends Model
 
     protected $fillable = [
         'user_id', 'license_type', 'license_number',
-        'issued_at', 'expires_at', 'status'
+        'issued_at', 'expires_at', 'l_status','payment_id',
     ];
 
     public function user()

@@ -53,7 +53,17 @@
   <div class="gtco-container">
     <div class="row animate-box">
       <div class="col-md-6 col-md-offset-3">
+        @if (session('success'))
+    <div class="alert alert-success" style="margin-bottom: 15px;">
+        {{ session('success') }}
+    </div>
+@endif
 
+@if (session('error'))
+    <div class="alert alert-danger" style="margin-bottom: 15px;">
+        {{ session('error') }}
+    </div>
+@endif
         <!-- Back to Home button -->
         
         <div class="login-card">

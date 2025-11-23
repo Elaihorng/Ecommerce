@@ -89,7 +89,11 @@
                                 <p class="text-muted mb-1">Full Name</p>
                                 <div class="fw-bold">{{ $user->full_name ?? $user->name }}</div>
                             </div>
-
+                            
+                            <div class="col-md-6 mb-3">
+                                <p class="text-muted mb-1">License Number</p>
+                                <div class="fw-bold">{{ $license?->license_number ?? '-' }}</div>
+                            </div>
                             <div class="col-md-6 mb-3">
                                 <p class="text-muted mb-1">License Status</p>
                                 <span class="badge {{ $badgeClass }}"
@@ -100,7 +104,7 @@
 
                             <div class="col-md-6 mb-3">
                                 <p class="text-muted mb-1">Permit Number</p>
-                                <div class="fw-bold">{{ $application->permit_number ?? '-' }}</div>
+                                <div class="fw-bold">{{ $license->permit_number ?? '-' }}</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -108,6 +112,7 @@
                                 <span class="badge bg-warning text-dark"
                                       style="padding:7px 14px; border-radius:12px; font-size:13px;">
                                     {{ $application->requested_license_type ?? '-' }}
+                                   
                                 </span>
                             </div>
 

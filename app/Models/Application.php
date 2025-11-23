@@ -13,7 +13,7 @@ class Application extends Model
 
     protected $fillable = [
         'user_id', 'application_type', 'requested_license_type',
-        'related_license_id', 'processed_by', 'status',
+        'related_license_id', 'processed_by', 'app_status',
         'submitted_at', 'processed_at', 'notes'
     ];
 

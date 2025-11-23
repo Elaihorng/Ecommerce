@@ -23,10 +23,16 @@ class LicenseController extends Controller
 
         $booking     = null;
         $testResult  = null;
+        $license        = null;
         $licenseStatus = 'no_application';
 
         if ($application) {
             // Latest booking for that application
+             $license = DB::table('licenses')
+                ->where('application_id', $application->id)
+                ->orderByDesc('id')
+                ->first();
+                
             $booking = DB::table('bookings')
                 ->where('application_id', $application->id)
                 ->orderByDesc('id')
@@ -39,7 +45,7 @@ class LicenseController extends Controller
                     ->orderByDesc('id')
                     ->first();
             }
-
+        
             // Decide license status
             $appStatus = strtolower($application->app_status ?? 'pending');
             $bStatus   = strtolower($booking->b_status ?? '');
@@ -68,6 +74,7 @@ class LicenseController extends Controller
             'booking'       => $booking,
             'testResult'    => $testResult,
             'licenseStatus' => $licenseStatus,
+            'license'       => $license, 
         ]);
     }
 }

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\BookingSuccessMail;
-
+use Illuminate\Support\Facades\Http;
 
 class BookingController extends Controller
 {
@@ -62,7 +62,7 @@ class BookingController extends Controller
             'test_center_id' => $application->test_center_id,
             'slot_id' => $slotId,
             'permit_number' => $application->permit_number,
-            'b_status' => 'pending',
+            'b_status' => 'submitted',
             'test_date' => $validated['test_date'],
             'test_time' => $validated['test_time'],
             'created_at' => now(),
@@ -76,6 +76,25 @@ class BookingController extends Controller
         return redirect()
             ->route('booking.checkout', ['permit_number' => $application->permit_number])
             ->with('success', 'Booking created. Review and confirm payment.');
+    }
+    private function sendTelegramMessage(string $text): void
+    {
+        $token  = env('TELEGRAM_TOKEN');
+        $chatId = env('TELEGRAM_CHAT_ID');
+
+        $url = "https://api.telegram.org/bot{$token}/sendMessage";
+
+        try {
+            Http::post($url, [
+                'chat_id'    => $chatId,
+                'text'       => $text,
+                'parse_mode' => 'HTML',
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Telegram send failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function checkout(Request $request)
@@ -138,164 +157,220 @@ class BookingController extends Controller
  * Unified pay handler for both booking (permit_number) and renewal (renewal_id).
  * Called from the checkout form.
  */
-   public function payKhqr(Request $request)
-    {
-        // Accept either renewal_id OR permit_number
-        $data = $request->validate([
-            'renewal_id'    => 'nullable|integer',
-            'permit_number' => 'nullable|string|max:200',
-            'amount'        => 'required|integer|min:1',
-            'currency'      => 'required|in:KHR,USD',
-        ]);
-        // Decide flow
-        $isRenewal = !empty($data['renewal_id']);
-        $isBooking = !empty($data['permit_number']);
+public function payKhqr(Request $request)
+{
+    $authId = Auth::id();
 
-        if (! $isRenewal && ! $isBooking) {
-            return back()->with('error', 'Missing permit number or renewal id.');
-        }
+    $data = $request->validate([
+        'renewal_id'    => 'nullable|integer',
+        'permit_number' => 'nullable|string|max:200',
+        'amount'        => 'required|integer|min:1',
+        'currency'      => 'required|in:KHR,USD',
+    ]);
 
-        // Locate target (booking/application) or renewal
-        $booking = null;
-        $application = null;
-        $renewal = null;
-        if ($isBooking) {
-            $booking = DB::table('bookings')->where('permit_number', $data['permit_number'])->latest('id')->first();
-            if (!$booking) {
-                return back()->with('error', 'Booking not found for permit number.');
-            }
-            $application = DB::table('applications')->where('id', $booking->application_id)->first();
-            $userId = $booking->user_id ?? $application->user_id ?? auth()->id();
-        } else {
-            $renewal = DB::table('license_renewals')->where('id', $data['renewal_id'])->first();
-            if (!$renewal) {
-                return back()->with('error', 'Renewal not found.');
-            }
-            $userId = $renewal->user_id;
-            // try to use permit_number saved on renewal or from user's application
-            $data['permit_number'] = $renewal->permit_number ?? DB::table('applications')->where('user_id', $userId)->orderByDesc('id')->value('permit_number');
-        }
+    $isRenewal = !empty($data['renewal_id']);
+    $isBooking = !empty($data['permit_number']);
 
-        // Get user for merchant label
-        $user = DB::table('users')->where('id', $userId)->first();
-
-        // ---------------------------
-        // Check for existing pending payment (do not recreate)
-        // ---------------------------
-        $now = Carbon::now();
-        $existingQuery = DB::table('payments')
-            ->where('user_id', $userId)
-            ->where('provider', 'bakong')
-            ->where('p_status', 'pending')
-            ->orderByDesc('id');
-
-        if (!empty($application->id)) {
-            $existingQuery->where('application_id', $application->id);
-        } elseif (!empty($renewal->id)) {
-            $existingQuery->where('renewal_id', $renewal->id);
-        }
-
-        $existingPayment = $existingQuery->first();
-
-        if ($existingPayment) {
-            // If it has an expiry and is still valid, reuse it
-            $expiresAt = null;
-            if (!empty($existingPayment->khqr_expires_at)) {
-                $expiresAt = Carbon::parse($existingPayment->khqr_expires_at);
-            }
-
-            if ($expiresAt && $now->lessThanOrEqualTo($expiresAt)) {
-                // Reuse existing pending payment — rebuild PNG from stored payload
-                $payload = $existingPayment->khqr_payload ?? '';
-                if (!empty($payload) && strlen($payload) > 20) {
-                    $png = Builder::create()->data($payload)->size(320)->margin(10)->build();
-
-                    $permitNumber = $data['permit_number'] ?? ($renewal->permit_number ?? null);
-
-                    return view('khqr', [
-                        'merchant_name' => strtoupper($user->full_name ?? $user->name ?? 'MERCHANT'),
-                        'amount' => (int)$data['amount'],
-                        'currency' => $data['currency'] ?? 'KHR',
-                        'qr_image_base64' => base64_encode($png->getString()),
-                        'qr_string' => $payload,
-                        'md5' => $existingPayment->khqr_md5,
-                        'show_payload' => false,
-                        'permit_number' => $permitNumber ?? 'N/A',
-                        'expires_at_iso' => $expiresAt->toIso8601String(),
-                    ]);
-                }
-                // otherwise fall through to regenerate
-            }
-            // existing found but expired -> fall through to generate new
-        }
-
-        // ---------------------------
-        // Generate new KHQR payload
-        // ---------------------------
-        $khqrCurrency = $data['currency'] === 'USD' ? KHQRData::CURRENCY_USD : KHQRData::CURRENCY_KHR;
-
-        $info = new IndividualInfo(
-            bakongAccountID: 'e_laihorng@aclb',
-            merchantName:    strtoupper($user->full_name ?? $user->name ?? 'MERCHANT'),
-            merchantCity:    'Phnom Penh',
-            currency:        $khqrCurrency,
-            amount:          (int)$data['amount']
-        );
-
-        $res = BakongKHQR::generateIndividual($info);
-
-        // Safely extract response
-        $resArr = is_array($res) ? $res : (array) $res;
-        $inner = $resArr['KHQRResponse'] ?? $resArr['data'] ?? ($resArr['Data'] ?? []);
-        if (is_object($inner)) $inner = (array) $inner;
-        $qrString = $inner['qr'] ?? $inner['QR'] ?? null;
-        $md5 = $inner['md5'] ?? $inner['MD5'] ?? $inner['hash'] ?? null;
-
-        if (empty($qrString) || empty($md5)) {
-            \Log::error('Failed to generate QR from Bakong', ['res' => $res, 'user_id' => $userId]);
-            return back()->with('error', 'Failed to generate QR from Bakong.');
-        }
-
-        // Build PNG
-        $png = Builder::create()->data($qrString)->size(320)->margin(10)->build();
-
-        // Create payment record, linking to application_id OR renewal_id
-        $expiresAt = $now->copy()->addMinutes(15);
-
-        $paymentId = DB::table('payments')->insertGetId([
-            'user_id' => $userId,
-            'application_id' => $application->id ?? null,
-            'renewal_id' => $renewal->id ?? null,
-            'amount' => $data['amount'],
-            'currency' => $data['currency'],
-            'provider' => 'bakong',
-            'provider_payment_id' => null,
-            'p_status' => 'pending',
-            'khqr_md5' => $md5,
-            'khqr_payload' => $qrString,
-            'khqr_generated_at' => $now,
-            'khqr_expires_at' => $expiresAt,
-            'created_at' => now(),
-            'paid_at' => null,
-        ]);
-
-        \Log::info('Created new payment', ['payment_id' => $paymentId, 'user_id' => $userId, 'application_id' => $application->id ?? null, 'renewal_id' => $renewal->id ?? null]);
-
-        // Return KHQR view. permit_number was prepared above for either flow.
-        $permitNumber = $data['permit_number'] ?? ($renewal->permit_number ?? null);
-
-        return view('khqr', [
-            'merchant_name' => strtoupper($user->full_name ?? $user->name ?? 'MERCHANT'),
-            'amount' => (int)$data['amount'],
-            'currency' => $data['currency'] ?? 'KHR',
-            'qr_image_base64' => base64_encode($png->getString()),
-            'qr_string' => $qrString,
-            'md5' => $md5,
-            'show_payload' => false,
-            'permit_number' => $permitNumber ?? 'N/A',
-            'expires_at_iso' => $expiresAt->toIso8601String(),
-        ]);
+    if (!$isRenewal && !$isBooking) {
+        return back()->with('error', 'Missing permit number or renewal id.');
     }
+
+    $booking     = null;
+    $application = null;
+    $renewal     = null;
+    $userId      = null;
+
+    /**
+     * =============== BOOKING FLOW ===============
+     */
+    if ($isBooking && !$isRenewal) {
+        $booking = DB::table('bookings')
+            ->where('permit_number', $data['permit_number'])
+            ->latest('id')
+            ->first();
+
+        if (!$booking) {
+            return back()->with('error', 'Booking not found for permit number.');
+        }
+
+        $application = DB::table('applications')
+            ->where('id', $booking->application_id)
+            ->first();
+
+        $userId = $booking->user_id
+            ?? $application->user_id
+            ?? $authId;
+    }
+    /**
+     * =============== RENEWAL FLOW ===============
+     */
+    else {
+        $renewal = DB::table('license_renewals')
+            ->where('id', $data['renewal_id'])
+            ->first();
+
+        if (!$renewal) {
+            return back()->with('error', 'Renewal not found.');
+        }
+
+        $userId = $renewal->user_id ?: $authId;
+
+        // the application is just for linking in payments (optional)
+        $application = DB::table('applications')
+            ->where('user_id', $userId)
+            ->orderByDesc('id')
+            ->first();
+
+        // For renewal: always use NEW renewal permit number
+        $data['permit_number'] = $renewal->permit_number;
+    }
+
+    if (empty($userId)) {
+        \Log::error('payKhqr: user_id is null', [
+            'data'      => $data,
+            'booking'   => $booking->id ?? null,
+            'renewal'   => $renewal->id ?? null,
+        ]);
+        return back()->with('error', 'Cannot resolve user for payment.');
+    }
+
+    $user     = DB::table('users')->where('id', $userId)->first();
+    $now      = Carbon::now();
+    $context  = $renewal ? 'renewal' : 'booking';
+    $permitNo = $data['permit_number'] ?? 'N/A';
+
+    // ---------------------------
+    // Try reusing existing pending payment
+    // ---------------------------
+    $existingQuery = DB::table('payments')
+        ->where('user_id', $userId)
+        ->where('provider', 'bakong')
+        ->where('p_status', 'pending')
+        ->orderByDesc('id');
+
+    if ($booking) {
+        $existingQuery->where('application_id', $booking->application_id);
+    }
+
+    if ($renewal) {
+        $existingQuery->where('renewal_id', $renewal->id);
+    }
+
+    $existingPayment = $existingQuery->first();
+
+    if ($existingPayment) {
+        $expiresAt = !empty($existingPayment->khqr_expires_at)
+            ? Carbon::parse($existingPayment->khqr_expires_at)
+            : null;
+
+        if ($expiresAt && $now->lessThanOrEqualTo($expiresAt)) {
+            $payload = $existingPayment->khqr_payload ?? '';
+            if (!empty($payload) && strlen($payload) > 20) {
+                $png = Builder::create()->data($payload)->size(320)->margin(10)->build();
+
+                return view('khqr', [
+                    'merchant_name'   => strtoupper($user->full_name ?? $user->name ?? 'MERCHANT'),
+                    'amount'          => (int) $data['amount'],
+                    'currency'        => $data['currency'] ?? 'KHR',
+                    'qr_image_base64' => base64_encode($png->getString()),
+                    'qr_string'       => $payload,
+                    'md5'             => $existingPayment->khqr_md5,
+                    'show_payload'    => false,
+                    'permit_number'   => $permitNo,
+                    'expires_at_iso'  => $expiresAt->toIso8601String(),
+
+                    // extra for JS
+                    'context'         => $context,
+                    'renewal_id'      => $renewal->id ?? null,
+                    'success_redirect' => $renewal
+                        ? route('renewal.success', ['permit_number' => $permitNo])
+                        : route('booking.success', ['permit_number' => $permitNo]),
+                ]);
+            }
+        }
+        // expired → fall through to create new
+    }
+
+    // ---------------------------
+    // Generate new KHQR
+    // ---------------------------
+    $khqrCurrency = $data['currency'] === 'USD'
+        ? KHQRData::CURRENCY_USD
+        : KHQRData::CURRENCY_KHR;
+
+    $info = new IndividualInfo(
+        bakongAccountID: 'e_laihorng@aclb',
+        merchantName:    strtoupper($user->full_name ?? $user->name ?? 'MERCHANT'),
+        merchantCity:    'Phnom Penh',
+        currency:        $khqrCurrency,
+        amount:          (int) $data['amount']
+    );
+
+    $res = BakongKHQR::generateIndividual($info);
+
+    $resArr  = is_array($res) ? $res : (array) $res;
+    $inner   = $resArr['KHQRResponse'] ?? $resArr['data'] ?? ($resArr['Data'] ?? []);
+    if (is_object($inner)) $inner = (array) $inner;
+
+    $qrString = $inner['qr']  ?? $inner['QR']  ?? null;
+    $md5      = $inner['md5'] ?? $inner['MD5'] ?? $inner['hash'] ?? null;
+
+    if (empty($qrString) || empty($md5)) {
+        \Log::error('Failed to generate QR from Bakong', [
+            'res'     => $res,
+            'user_id' => $userId,
+        ]);
+        return back()->with('error', 'Failed to generate QR from Bakong.');
+    }
+
+    $png       = Builder::create()->data($qrString)->size(320)->margin(10)->build();
+    $expiresAt = $now->copy()->addMinutes(15);
+
+    $paymentId = DB::table('payments')->insertGetId([
+        'user_id'             => $userId,
+        'application_id'      => $application->id ?? null,
+        'renewal_id'          => $renewal->id ?? null,
+        'amount'              => $data['amount'],
+        'currency'            => $data['currency'],
+        'provider'            => 'bakong',
+        'provider_payment_id' => null,
+        'p_status'            => 'pending',
+        'khqr_md5'            => $md5,
+        'khqr_payload'        => $qrString,
+        'khqr_generated_at'   => $now,
+        'khqr_expires_at'     => $expiresAt,
+        'created_at'          => now(),
+        'paid_at'             => null,
+    ]);
+
+    \Log::info('Created new payment', [
+        'payment_id'     => $paymentId,
+        'user_id'        => $userId,
+        'application_id' => $application->id ?? null,
+        'renewal_id'     => $renewal->id ?? null,
+    ]);
+
+    return view('khqr', [
+        'merchant_name'   => strtoupper($user->full_name ?? $user->name ?? 'MERCHANT'),
+        'amount'          => (int) $data['amount'],
+        'currency'        => $data['currency'] ?? 'KHR',
+        'qr_image_base64' => base64_encode($png->getString()),
+        'qr_string'       => $qrString,
+        'md5'             => $md5,
+        'show_payload'    => false,
+        'permit_number'   => $permitNo,  // booking: booking permit, renewal: new permit
+        'expires_at_iso'  => $expiresAt->toIso8601String(),
+
+        // extra for JS
+        'context'         => $context,
+        'renewal_id'      => $renewal->id ?? null,
+        'success_redirect' => $renewal
+            ? route('renewal.success', ['permit_number' => $permitNo])
+            : route('booking.success', ['permit_number' => $permitNo]),
+    ]);
+}
+
+
 
     /**
      * Manual check triggered by form (keeps old behavior).
@@ -360,119 +435,223 @@ class BookingController extends Controller
     /**
      * AJAX polling endpoint used by khqr_card page.
      */
-    public function checkPaymentAjax(Request $request)
-    {
-        $request->validate(['permit_number' => 'required|string']);
+public function checkPaymentAjax(Request $request)
+{
+    $request->validate(['permit_number' => 'required|string']);
 
-       $booking = DB::table('bookings')->where('permit_number', $request->permit_number)->latest('id')->first();
-        if ($booking) {
-            $payment = DB::table('payments')->where('application_id', $booking->application_id)->where('provider','bakong')->where('p_status','pending')->latest('id')->first();
-        } else {
-            // try as renewal reference
-            $renewal = DB::table('license_renewals')->where('reference', $request->permit_number)->first();
-            if ($renewal) {
-                $payment = DB::table('payments')->where('renewal_id', $renewal->id)->where('provider','bakong')->where('p_status','pending')->latest('id')->first();
-            } else {
-                return response()->json(['status' => 'not_found']);
-            }
-        }
+    $permit  = $request->permit_number;
+    $booking = null;
+    $renewal = null;
+    $payment = null;
+    $context = null; // 'booking' or 'renewal'
 
-        // find latest payment for this application/provider
+    /**
+     * 1) Try as RENEWAL first (because renewal uses NEW permit_number)
+     */
+    $renewal = DB::table('license_renewals')
+        ->where('permit_number', $permit)
+        ->latest('id')
+        ->first();
+
+    if ($renewal) {
         $payment = DB::table('payments')
-            ->where('application_id', $booking->application_id)
+            ->where('renewal_id', $renewal->id)
             ->where('provider', 'bakong')
+            ->whereNotNull('khqr_md5')
+            ->latest('id')
+            ->first();
+        $context = 'renewal';
+    } else {
+        /**
+         * 2) Fallback: normal BOOKING flow
+         */
+        $booking = DB::table('bookings')
+            ->where('permit_number', $permit)
             ->latest('id')
             ->first();
 
-        if (!$payment) return response()->json(['status' => 'not_found']);
+        if ($booking) {
+            $payment = DB::table('payments')
+                ->where('application_id', $booking->application_id)
+                ->where('provider', 'bakong')
+                ->whereNotNull('khqr_md5')
+                ->latest('id')
+                ->first();
+            $context = 'booking';
+        } else {
+            // no booking + no renewal for this permit
+            return response()->json(['status' => 'not_found']);
+        }
+    }
 
-        // If already marked paid in DB, return paid now
-        if (!empty($payment->p_status) && strtolower($payment->p_status) === 'paid') {
-            return response()->json(['status' => 'paid']);
+    // If still no payment → nothing to check yet
+    if (!$payment) {
+        return response()->json(['status' => 'no_payment']);
+    }
+
+    // Already paid in DB?
+    if (!empty($payment->p_status) && strtolower($payment->p_status) === 'paid') {
+        return response()->json(['status' => 'paid']);
+    }
+
+    // Expired KHQR?
+    if (!empty($payment->khqr_expires_at)
+        && \Carbon\Carbon::now()->greaterThan(\Carbon\Carbon::parse($payment->khqr_expires_at))) {
+        return response()->json(['status' => 'expired']);
+    }
+
+    try {
+        $client = new BakongKHQR(env('BAKONG_TOKEN'));
+        $res    = $client->checkTransactionByMD5($payment->khqr_md5);
+
+        \Log::info('bakong.checkTransactionByMD5 response', [
+            'res'        => $res,
+            'payment_id' => $payment->id,
+        ]);
+
+        $arr = is_array($res) ? $res : (array) $res;
+
+        $responseCode    = $arr['responseCode']    ?? $arr['ResponseCode']    ?? null;
+        $responseMessage = $arr['responseMessage'] ?? $arr['ResponseMessage'] ?? null;
+        $inner           = $arr['data']            ?? ($arr['Data'] ?? []);
+
+        if (is_object($inner)) $inner = (array) $inner;
+
+        $hash  = $inner['hash'] ?? $inner['md5'] ?? $inner['khqr_md5'] ?? null;
+        $txid  = $inner['externalRef'] ?? $inner['transaction_id'] ?? $inner['tx_id'] ?? null;
+        $ackMs = $inner['acknowledgedDateMs'] ?? $inner['ackMs'] ?? null;
+
+        \Log::info('bakong.parsed', [
+            'responseCode'    => $responseCode,
+            'responseMessage' => $responseMessage,
+            'hash'            => $hash,
+            'txid'            => $txid,
+            'ackMs'           => $ackMs,
+            'payment_id'      => $payment->id,
+            'context'         => $context,
+        ]);
+
+        // Decide success
+        $isSuccess = false;
+        if ($responseCode !== null && (int) $responseCode === 0) {
+            $isSuccess = true;
+        }
+        if (!$isSuccess && $responseMessage !== null
+            && stripos((string) $responseMessage, 'success') !== false) {
+            $isSuccess = true;
+        }
+        if (!$isSuccess && !empty($ackMs)) {
+            $isSuccess = true;
         }
 
-        // Check expiry
-        if (!empty($payment->khqr_expires_at) && \Carbon\Carbon::now()->greaterThan(\Carbon\Carbon::parse($payment->khqr_expires_at))) {
-            return response()->json(['status' => 'expired']);
-        }
-
-        // Otherwise call Bakong to verify
-       try {
-            $client = new BakongKHQR(env('BAKONG_TOKEN'));
-            $res = $client->checkTransactionByMD5($payment->khqr_md5);
-
-            \Log::info('bakong.checkTransactionByMD5 response', ['res' => $res, 'payment_id' => $payment->id]);
-
-            // Normalize to array and find the most relevant fields
-            $arr = is_array($res) ? $res : (array) $res;
-
-            // If provider returns envelope keys like responseCode/responseMessage and data
-            $responseCode = $arr['responseCode'] ?? $arr['ResponseCode'] ?? null;
-            $responseMessage = $arr['responseMessage'] ?? $arr['ResponseMessage'] ?? null;
-            $inner = $arr['data'] ?? ($arr['Data'] ?? []);
-
-            if (is_object($inner)) $inner = (array) $inner;
-
-            // Extract useful fields
-            $hash = $inner['hash'] ?? $inner['md5'] ?? $inner['khqr_md5'] ?? null;
-            $txid = $inner['externalRef'] ?? $inner['transaction_id'] ?? $inner['tx_id'] ?? null;
-            $ackMs = $inner['acknowledgedDateMs'] ?? $inner['ackMs'] ?? null;
-
-            \Log::info('bakong.parsed', [
-                'responseCode' => $responseCode,
-                'responseMessage' => $responseMessage,
-                'hash' => $hash,
-                'txid' => $txid,
-                'ackMs' => $ackMs,
-                'payment_id' => $payment->id
+        if ($isSuccess) {
+            // mark payment paid
+            DB::table('payments')->where('id', $payment->id)->update([
+                'p_status'            => 'paid',
+                'provider_payment_id' => $txid ?? $payment->provider_payment_id ?? $payment->khqr_md5,
+                'paid_at'             => now(),
+                'updated_at'          => now(),
             ]);
 
-            // Decide success: provider indicates success when responseCode === 0 OR responseMessage contains 'success'
-            $isSuccess = false;
-            if ($responseCode !== null && (int)$responseCode === 0) $isSuccess = true;
-            if (! $isSuccess && $responseMessage !== null && stripos((string)$responseMessage, 'success') !== false) $isSuccess = true;
-            // Also treat presence of acknowledgedDateMs (acknowledged timestamp) as success
-            if (! $isSuccess && !empty($ackMs)) $isSuccess = true;
-
-            if ($isSuccess) {
-                DB::table('payments')->where('id', $payment->id)->update([
-                    'p_status' => 'paid',
-                    'provider_payment_id' => $txid ?? $payment->provider_payment_id ?? $payment->khqr_md5,
-                    'paid_at' => now(),
+            /**
+             * ========= BOOKING SUCCESS =========
+             */
+            if ($context === 'booking' && $booking) {
+                DB::table('bookings')->where('id', $booking->id)->update([
+                    'b_status'   => 'submitted',
                     'updated_at' => now(),
                 ]);
 
-                if (!empty($payment->application_id)) {
-                    $booking = DB::table('bookings')->where('application_id', $payment->application_id)->latest('id')->first();
-                    $user = DB::table('users')->where('id', $booking->user_id)->first();
-                    $application = DB::table('applications')->where('id', $payment->application_id)->first();
+                $user = DB::table('users')->where('id', $booking->user_id)->first();
+                $application = DB::table('applications')
+                    ->where('id', $booking->application_id)
+                    ->first();
 
-                    if ($user && !empty($user->email)) {
-                        try {
-                           Mail::to($user->email)->send(new BookingSuccessMail($user, $booking, $application));
+                if ($user && !empty($user->email)) {
+                    try {
+                        Mail::to($user->email)->send(
+                            new BookingSuccessMail($user, $booking, $application)
+                        );
 
-                        } catch (\Throwable $e) {
-                            \Log::error('BookingSuccessMail failed', [
-                                'application_id' => $payment->application_id,
-                                'user_id'        => $user->id ?? null,
-                                'error'          => $e->getMessage(),
-                            ]);
-                        }
+                        $msg  = "📣 <b>New Booking Success</b>\n\n";
+                        $msg .= "👤 <b>Name:</b> {$user->full_name}\n";
+                        $msg .= "⚧ <b>Gender:</b> {$user->gender}\n";
+                        $msg .= "📧 <b>Email:</b> {$user->email}\n";
+                        $msg .= "📝 <b>Application Type:</b> {$application->application_type}\n";
+                        $msg .= "🔢 <b>Permit Number:</b> {$application->permit_number}\n";
+                        $msg .= "💰 <b>Payment Status:</b> paid\n";
+                        $msg .= "🏦 <b>Provider:</b> {$payment->provider}\n";
+
+                        $this->sendTelegramMessage($msg);
+
+                    } catch (\Throwable $e) {
+                        \Log::error('BookingSuccessMail failed', [
+                            'application_id' => $payment->application_id,
+                            'user_id'        => $user->id ?? null,
+                            'error'          => $e->getMessage(),
+                        ]);
                     }
                 }
 
-                \Log::info('Payment marked paid (via checkTransactionByMD5)', ['payment_id' => $payment->id, 'txid' => $txid]);
                 return response()->json(['status' => 'paid']);
             }
 
-            // Not successful yet: return pending with parsed info for debugging
-            return response()->json(['status' => 'pending', 'raw' => $inner]);
-        } catch (\Throwable $e) {
-            \Log::error('checkPaymentAjax exception', ['msg' => $e->getMessage(), 'payment_id' => $payment->id ?? null]);
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+            /**
+             * ========= RENEWAL SUCCESS =========
+             */
+            if ($context === 'renewal' && $renewal) {
+                DB::table('license_renewals')->where('id', $renewal->id)->update([
+                    'status'     => 'submitted',
+                    'updated_at' => now(),
+                ]);
+
+                $user = DB::table('users')->where('id', $renewal->user_id)->first();
+
+                if ($user) {
+                    $msg  = "♻️ <b>License Renewal Payment Success</b>\n\n";
+                    $msg .= "👤 <b>Name:</b> {$user->full_name}\n";
+                    $msg .= "📧 <b>Email:</b> {$user->email}\n";
+                    $msg .= "🔢 <b>Current License:</b> {$renewal->current_license_number}\n";
+                    $msg .= "📄 <b>Renewal Permit:</b> {$renewal->permit_number}\n";
+                    $msg .= "💰 <b>Payment Status:</b> paid\n";
+                    $msg .= "🏦 <b>Provider:</b> {$payment->provider}\n";
+
+                    $this->sendTelegramMessage($msg);
+                }
+
+                // frontend handles redirect using successRedirect from KHQR view,
+                // so we just say "paid" here
+                return response()->json(['status' => 'paid']);
+            }
+
+            \Log::info('Payment marked paid (via checkTransactionByMD5)', [
+                'payment_id' => $payment->id,
+                'txid'       => $txid,
+                'context'    => $context,
+            ]);
+
+            return response()->json(['status' => 'paid']);
         }
 
+        // Not successful yet
+        return response()->json(['status' => 'pending', 'raw' => $inner]);
+
+    } catch (\Throwable $e) {
+        \Log::error('checkPaymentAjax exception', [
+            'msg'        => $e->getMessage(),
+            'payment_id' => $payment->id ?? null,
+        ]);
+
+        return response()->json([
+            'status'  => 'error',
+            'message' => $e->getMessage(),
+        ]);
     }
+}
+
+
+
+
     public function history()
     {
         $userId = Auth::id();
@@ -572,6 +751,7 @@ class BookingController extends Controller
     {
         return view('frontend.checkout_payment.success', compact('permit_number'));
     }
+    
 
 }
 

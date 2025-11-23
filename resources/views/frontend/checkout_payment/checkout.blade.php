@@ -82,13 +82,6 @@
                                         </li>
                                     @endisset
 
-                                    
-
-                                    
-
-                                    
-
-                                    
                                 </ul>
                             </div>
 
@@ -106,15 +99,28 @@
                                             <strong><i class="fas fa-id-card"></i> License Type:</strong> {{ $license_type }}
                                         </li>
                                     @endisset
-                                    <li class="list-group-item">
-                                        <strong><i class="fas fa-map-marker-alt"></i> Test Center:</strong> {{ $center_name }}
-                                    </li>
-                                    <li class="list-group-item">
-                                        <strong><i class="fas fa-calendar-alt"></i> Test Date:</strong> {{ $test_date }}
-                                    </li>
-                                    <li class="list-group-item">
-                                        <strong><i class="fas fa-clock"></i> Test Time:</strong> {{ $test_time }}
-                                    </li>
+                                   
+                                     {{-- Show test info only for normal booking, NOT renewal --}}
+                                    @if(!isset($renewal_id))
+                                        @isset($center_name)
+                                            <li class="list-group-item">
+                                                <strong><i class="fas fa-map-marker-alt"></i> Test Center:</strong> {{ $center_name }}
+                                            </li>
+                                        @endisset
+
+                                        @isset($test_date)
+                                            <li class="list-group-item">
+                                                <strong><i class="fas fa-calendar-alt"></i> Test Date:</strong> {{ $test_date }}
+                                            </li>
+                                        @endisset
+
+                                        @isset($test_time)
+                                            <li class="list-group-item">
+                                                <strong><i class="fas fa-clock"></i> Test Time:</strong> {{ $test_time }}
+                                            </li>
+                                        @endisset
+                                    @endif
+
                                     <li class="list-group-item">
                                         <strong><i class="fas fa-money-bill"></i> Price:</strong> {{ number_format($amount) }} {{ $currency }}
                                     </li>

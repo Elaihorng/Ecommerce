@@ -68,6 +68,11 @@
 									@else
 										<li><a href="{{ route('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
 										<li><a href="{{ route('register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
+										<li>
+											<a href="{{ url('/admin') }}">
+												<i class="fas fa-user-shield"></i> Admin
+											</a>
+										</li>
 									@endauth
 									
 								</ul>

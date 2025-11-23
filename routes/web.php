@@ -45,6 +45,8 @@ Route::controller(UserController::class)->group(function(){
     // Route::get('/login/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::get('/profile','profile')->name('profile');
 });
+Route::get('/verify-email/{token}', [RegisterController::class, 'verifyEmail'])
+    ->name('verify.email');
 
 
 Route::controller(NewsController::class)->group(function(){
@@ -82,6 +84,8 @@ Route::post('/logout', function () {
 })->name('logout');
 // services
 
+Route::get('/renewal/success/{permit_number}', [LicenseRenewalController::class, 'success'])
+    ->name('renewal.success');
 Route::post('/service/checkstatus', [ServiceController::class, 'checkStatus'])
     ->name('application.status.search');
 
