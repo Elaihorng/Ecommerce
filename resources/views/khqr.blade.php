@@ -168,22 +168,22 @@
         return;
       }
 
-      if (json.status === 'not_found') {
-        const msgEl = document.getElementById('statusMsg');
-        msgEl.textContent = 'No QR found on server. Please try again.';
-        msgEl.classList.add('error');
-        stopped = true;
-        return;
-      }
+      // if (json.status === 'not_found') {
+      //   const msgEl = document.getElementById('statusMsg');
+      //   msgEl.textContent = 'No QR found on server. Please try again.';
+      //   msgEl.classList.add('error');
+      //   stopped = true;
+      //   return;
+      // }
 
-      if (json.status === 'error') {
-        console.warn('Payment check error:', json.message);
-        const msgEl = document.getElementById('statusMsg');
-        msgEl.textContent = 'Temporary error checking payment. Retrying...';
-        msgEl.classList.add('error');
-      } else {
-        document.getElementById('statusMsg').textContent = 'Waiting for payment...';
-      }
+      // if (json.status === 'error') {
+      //   console.warn('Payment check error:', json.message);
+      //   const msgEl = document.getElementById('statusMsg');
+      //   msgEl.textContent = 'Temporary error checking payment. Retrying...';
+      //   msgEl.classList.add('error');
+      // } else {
+      //   document.getElementById('statusMsg').textContent = 'Waiting for payment...';
+      // }
 
     } catch (e) {
       console.warn('Polling failed', e);
